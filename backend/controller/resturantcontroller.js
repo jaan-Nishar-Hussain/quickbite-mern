@@ -6,7 +6,7 @@ const createResturant = async (req, res) => {
         const { name, image, location, description } = req.body;
 
         // Validate required fields
-        if (!name || !image || !location ||  !description ) {
+        if (!name || !image || !location ||  !description  ) {
             return res.status(400).json({ message: 'Please provide all required fields properly.' });
         }
 
@@ -15,7 +15,8 @@ const createResturant = async (req, res) => {
             name,
             image,
             location,
-            description
+            description,
+        
         });
 
         // Save the document to the database

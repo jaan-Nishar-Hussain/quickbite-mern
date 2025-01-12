@@ -1,35 +1,48 @@
-const fs = require('fs');
-const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const User = require('../models/user'); 
+const bcrypt = require('bcrypt');
+const User = require('../models/user');
+const Menu = require('../models/menu');
+const Resturant = require('../models/resturant');
+const fs = require('fs');
+const path = require('path');
 
-const privateKey = fs.readFileSync("./private.key", "utf8");
+const privateKey = fs.readFileSync(path.join(__dirname, '../private.key'), 'utf-8');
 
-
+// 📝 Register a new user
 const register = async (req, res) => {
     try {
-        const { firstname, lastname, password, phone, email} = req.body;
+        const { firstname, lastname, email, phone, password, address } = req.body;
 
-        
-        if (!email || !firstname || !lastname || !password || !phone) {
-            return res.status(400).json({ message: 'All fields are required' });
+        // Validate input
+        if (!firstname || !lastname || !email || !phone || !password || !address) {
+            return res.status(400).json({ message: 'Please enter all required details' });
         }
 
-        
-        const hash = bcrypt.hashSync(password, 10);
+        // Check if user already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ message: 'User already exists' });
+        }
 
-        
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Create new user
         const newUser = new User({
             firstname,
             lastname,
-            password: hash,
-            phone,
             email,
+            phone,
+            password: hashedPassword,
+            address
         });
 
-        
+        // Save user to the database
+        await newUser.save();
+
+        // Generate JWT token
         const token = jwt.sign(
-            { id: newUser._id, email },
+            { userId: newUser._id, email: newUser.email },
             privateKey,
             { algorithm: "RS256", expiresIn: "24h" }
         );
@@ -45,31 +58,31 @@ const register = async (req, res) => {
     }
 };
 
+// 📝 Login a user
 const login = async (req, res) => {
     try {
-        const { password, email } = req.body;
+        const { email, password } = req.body;
 
-    
+        // Validate input
         if (!email || !password) {
-            return res.status(400).json({ message: 'Email and password are required' });
+            return res.status(400).json({ message: 'Please enter all required details' });
         }
 
+        // Check if user exists
         const existingUser = await User.findOne({ email });
-
         if (!existingUser) {
-            return res.status(400).json({ message: 'Please enter a valid email' });
+            return res.status(400).json({ message: 'Invalid email or password' });
         }
 
-        
-        const isAuth = bcrypt.compareSync(password, existingUser.password);
-
-        if (!isAuth) {
-            return res.status(400).json({ message: 'Your password is incorrect' });
+        // Check password
+        const isPasswordValid = await bcrypt.compare(password, existingUser.password);
+        if (!isPasswordValid) {
+            return res.status(400).json({ message: 'Invalid email or password' });
         }
 
-        // Generate JWT Token
+        // Generate JWT token
         const token = jwt.sign(
-            { id: existingUser._id, email },
+            { userId: existingUser._id, email: existingUser.email },
             privateKey,
             { algorithm: "RS256", expiresIn: "24h" }
         );
@@ -85,7 +98,31 @@ const login = async (req, res) => {
     }
 };
 
+// 📝 Get all menu items
+const getMenu = async (req, res) => {
+    try {
+        const menus = await Menu.find().populate('resturant');
+        res.status(200).json(menus);
+    } catch (error) {
+        console.error('Error fetching menus:', error.message);
+        res.status(500).json({ message: 'Internal server error', error: error.message });
+    }
+};
+
+// 📝 Get all restaurants
+const getResturants = async (req, res) => {
+    try {
+        const resturants = await Resturant.find();
+        res.status(200).json(resturants);
+    } catch (error) {
+        console.error('Error fetching resturants:', error.message);
+        res.status(500).json({ message: 'Internal server error', error: error.message });
+    }
+};
+
 module.exports = {
     register,
     login,
+    getMenu,
+    getResturants,
 };

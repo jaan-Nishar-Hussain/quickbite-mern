@@ -45,7 +45,7 @@ const Register = () => {
 
   return (
     <form onSubmit={handleSubmit}>
-      <h1>Register as Admin</h1>
+      <h1>Register page</h1>
       <input
         type="text"
         name="firstname"

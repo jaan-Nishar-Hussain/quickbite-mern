@@ -49,7 +49,7 @@ const Login = () => {
   return (
     
     <form onSubmit={handleSubmit}>
-      <h1>login as admin</h1>
+      <h1>login page</h1>
       <input
         type="email"
         name="email"
